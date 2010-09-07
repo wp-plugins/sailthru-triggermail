@@ -54,7 +54,7 @@ switch(@$_GET['action']) {
 				echo json_encode($errors);
 				die();
 			}
-			else {			
+			else {
 				require_once('sailthru_api.php');
 				$client = new Sailthru_Client(get_option('sailthru_api_key'), get_option('sailthru_secret'));
 				
