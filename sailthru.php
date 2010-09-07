@@ -2,14 +2,14 @@
 /**
  * @package Sailthru
  * @author Jon Tascher
- * @version 0.4
+ * @version 1.0
  */
 /*
 Plugin Name: Sailthru
 Plugin URI: http://www.sailthru.com
 Description: Intergrate Sailthru API functionality into your WordPress blog.
 Author: Jon Tascher
-Version: 0.4
+Version: 1.0
 Author URI: http://www.jontascher.com
 */
 ob_start();
@@ -33,7 +33,6 @@ if(!class_exists('Sailthru')) {
 			add_action('wp_ajax_sailthru_save_datafeed', array(&$this, 'save_datafeed'));
 			add_action('wp_ajax_sailthru_delete_datafeed', array(&$this, 'delete_datafeed'));
 			add_action('wp_ajax_sailthru_get_datafeed_html', array(&$this, 'get_datafeed_html'));
-            // add_action('wp_ajax_sailthru_get_template_list', array(&$this, 'get_template_list'));
 			add_action('wp_ajax_sailthru_get_template_info', array(&$this, 'get_template_info'));
 			
 			//filters
