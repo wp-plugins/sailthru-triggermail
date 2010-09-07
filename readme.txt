@@ -1,4 +1,4 @@
-=== Plugin Name ===
+=== Sailthru Triggermail ===
 Contributors: jontasc
 Tags: sailthru, triggermail, email, esp
 Requires at least: 2.7
