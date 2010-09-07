@@ -50,7 +50,7 @@ We have 2 redundant systems in both London and New York running a series of smal
 
 == Installation ==
 
-1. Upload `plugin-name.php` to the `/wp-content/plugins/` directory
+1. Upload the plugin folder `sailthru-triggermail` to the `/wp-content/plugins/` directory
 1. Activate the plugin through the 'Plugins' menu in WordPress
 1. In your admin area, go to Settings -> Sailthru
 1. In the 'General Options' section, enter your API key and secret.  If you do not have one, please contact us at [Sailthru.com](http://www.sailthru.com) for assistance.
