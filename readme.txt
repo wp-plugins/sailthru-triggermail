@@ -3,7 +3,7 @@ Contributors: jontasc
 Tags: sailthru, triggermail, email, esp
 Requires at least: 2.7
 Tested up to: 3.0.1
-Stable tag: 1.0
+Stable tag: 1.1
 
 Integrate Sailthru's Triggermail API functionality into your WordPress blog.
 

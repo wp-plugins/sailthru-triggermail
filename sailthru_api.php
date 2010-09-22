@@ -1,7 +1,17 @@
 <?php
 
 /*******************************************************************************
- * Sailthru API PHP5 Client for WordPress
+ * Sailthru API PHP5 Client for Musicnation - Blank
+ *******************************************************************************
+ *
+ * A simple client library to remotely access the Sailthru REST API.
+ *
+ * NOTE: This custom library was downloaded by Practice from sailthru.com
+ * on 09/22/2010. It contains the API key and shared-secret specific to Musicnation - Blank.
+ * For your own security, this information should not be shared. If you choose
+ * to redistribute this code, as permitted by the license, please remove this
+ * private information.
+ *
  *******************************************************************************
  *
  * Copyright (c) 2007 Sailthru, Inc.
@@ -32,8 +42,8 @@
 
 class Sailthru_Client {
     private $api_uri = 'http://api.sailthru.com';
-    private $api_key;
-    private $secret;
+    private $api_key = '8a10b15924a09e0957e249236974feb0'; // specific to Musicnation - Blank
+    private $secret  = 'df31c7bcdcb734f485e960399e41cb61'; // specific to Musicnation - Blank
     private $version = '1.0';
     
     /**
@@ -52,6 +62,8 @@ class Sailthru_Client {
     
     /**
      * Remotely send an email template to a single email address.
+     *
+     * If you pass the $schedule_time parameter, the send will be scheduled for a future time.
      * 
      * Options:
      *   replyto: override Reply-To header
@@ -60,13 +72,39 @@ class Sailthru_Client {
      * @param string $template_name
      * @param string $email
      * @param array $vars
-     * @param arary $options
+     * @param array $options
+     * @param string $schedule_time
      * @return array
      */
-    public function send($template_name, $email, $vars = array(), $options = array()) {
+    public function send($template_name, $email, $vars = array(), $options = array(), $schedule_time = null) {
         $post['template'] = $template_name;
         $post['email'] = $email;
         $post['vars'] = $vars;
+        $post['options'] = $options;
+        if ($schedule_time) {
+            $post['schedule_time'] = $schedule_time;
+        }
+        $result = $this->apiPost('send', $post);
+        return $result;
+    }
+    
+    /**
+     * Remotely send an email template to multiple email addresses.
+     *
+     * Use the evars parameter to set replacement vars for a particular email address.
+     *
+     * @param string $template_name
+     * @param array $emails
+     * @param array $vars
+     * @param array $evars
+     * @param array $options
+     * @return array
+     */
+    public function multisend($template_name, $emails, $vars = array(), $evars = array(), $options = array()) {
+        $post['template'] = $template_name;
+        $post['email'] = is_array($emails) ? implode(',', $emails) : $emails;
+        $post['vars'] = $vars;
+        $post['evars'] = $evars;
         $post['options'] = $options;
         $result = $this->apiPost('send', $post);
         return $result;
@@ -83,10 +121,20 @@ class Sailthru_Client {
     }
     
     /**
+     * Cancel a send that was scheduled for a future time.
+     *
+     * @param string $send_id
+     * @return array
+     */
+    public function cancelSend($send_id) {
+        return $this->apiPost('send', array('send_id' => $send_id), 'DELETE');
+    }
+    
+    /**
      * Return information about an email address, including replacement vars and lists.
      *
      * @param string $email
-     * @return unknown
+     * @return array
      */
     public function getEmail($email) {
         return $this->apiGet('email', array('email' => $email));
@@ -126,13 +174,6 @@ class Sailthru_Client {
     public function getBlast($blast_id) {
         return $this->apiGet('blast', array('blast_id' => $blast_id));
     }
-
-	public function sailthru_eval($datafeed, $template) {
-		$data['data_feed_url'] = $datafeed;
-		$data['template'] = $template;
-		$data['sysvars'] = 1;
-		return $this->apiPost('eval', $data);
-	}
     
     /**
      * Schedule a mass mail blast
@@ -256,6 +297,25 @@ class Sailthru_Client {
         return true;
     }
     
+    public function setHorizonCookie($email, $domain = null, $duration = null, $secure = false) {
+        $data = $this->apiGet('horizon', array('email' => $email, 'hid_only' => 1));
+        if (!isset($data['hid'])) {
+            return false;
+        }
+        if (!$domain) {
+            $domain_parts = explode('.', $_SERVER['HTTP_HOST']);
+            $domain = $domain_parts[sizeof($domain_parts)-2] . '.' . $domain_parts[sizeof($domain_parts)-1];
+        }
+        if ($duration === null) {
+            $expire = time() + 31556926;
+        } else if ($duration) {
+            $expire = time() + $duration;
+        } else {
+            $expire = 0;
+        }
+        setcookie('sailthru_hid', $data['hid'], $expire, '/', $domain, $secure);
+    }
+    
     /**
      * Perform an API GET request, using the shared-secret auth hash.
      *
@@ -288,31 +348,74 @@ class Sailthru_Client {
     }
     
     /**
-     * Generic HTTP request function
-     * 
-     * Adapted from: http://netevil.org/blog/2006/nov/http-post-from-php-without-curl 
+     * Perform an HTTP request, checking for curl extension support 
      *
-     * @param string $uri
+     * @param string $url
      * @param array $data
      * @param array $headers
      * @return string
      */
-    public function httpRequest($uri, $data, $method = 'POST') {
+    public function httpRequest($url, $data, $method = 'POST') {
+        if (function_exists('curl_init')) {
+            return $this->httpRequestCurl($url, $data, $method);
+        } else {
+            return $this->httpRequestWithoutCurl($url, $data, $method);
+        }
+    }
+    
+    /**
+     * Perform an HTTP request using the curl extension 
+     *
+     * @param string $url
+     * @param array $data
+     * @param array $headers
+     * @return string
+     */
+    public function httpRequestCurl($url, $data, $method = 'POST') {
+        $ch = curl_init();
+        if ($method == 'POST') {
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($data, '', '&'));
+        } else {
+            $url .= '?' . http_build_query($data, '', '&');
+            if ($method != 'GET') {
+                curl_setopt($ch, CURLOPT_CUSTOMREQUEST, $method);
+            }
+        }
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_HEADER, false);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $data = curl_exec($ch);
+        if (!$data) {
+            throw new Sailthru_Client_Exception("Bad response received from $url");
+        }
+        return $data;
+    }
+    
+    /**
+     * Adapted from: http://netevil.org/blog/2006/nov/http-post-from-php-without-curl 
+     *
+     * @param string $url
+     * @param array $data
+     * @param array $headers
+     * @return string
+     */
+    public function httpRequestWithoutCurl($url, $data, $method = 'POST') {
         $params = array('http' => array('method' => $method));
         if ($method == 'POST') {
-            $params['http']['content'] = is_array($data) ? http_build_query($data) : $data;
+            $params['http']['content'] = is_array($data) ? http_build_query($data, '', '&') : $data;
         } else {
-            $uri .= '?' . http_build_query($data);
+            $url .= '?' . http_build_query($data, '', '&');
         }
         $params['http']['header'] = "User-Agent: Sailthru API PHP5 Client $this->version " . phpversion() . "\nContent-Type: application/x-www-form-urlencoded";
         $ctx = stream_context_create($params);
-        $fp = @fopen($uri, 'rb', false, $ctx);
+        $fp = @fopen($url, 'rb', false, $ctx);
         if (!$fp) {
-            throw new Sailthru_Client_Exception("Unable to open stream: $uri");
+            throw new Sailthru_Client_Exception("Unable to open stream: $url");
         }
         $response = @stream_get_contents($fp);
         if ($response === false) {
-            throw new Sailthru_Client_Exception("No response received from stream: $uri");
+            throw new Sailthru_Client_Exception("No response received from stream: $url");
         }
         return $response;
     }
